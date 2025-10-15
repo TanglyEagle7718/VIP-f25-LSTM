@@ -1,4 +1,4 @@
-from qiskit import QuantumCircuit, transpile
+from qiskit import QuantumCircuit, ClassicalRegister, transpile
 from qiskit_aer import AerSimulator
 from qiskit.circuit import ParameterVector
 from qiskit.visualization import plot_histogram
@@ -29,7 +29,7 @@ def create_forget_block_vqc(num_features: int):
     x_params = ParameterVector('x', length=num_features)
     theta_params = ParameterVector('θ', length=num_features * 2)
 
-    qc = QuantumCircuit(num_qubits, name="VQC1_ForgetBlock")
+    qc = QuantumCircuit(num_qubits, num_features, name="VQC1_ForgetBlock")
 
     # --- 1. State Preparation / Data Encoding ---
     for i in range(num_features):
@@ -78,8 +78,12 @@ def run_simulation(circuit: QuantumCircuit, x_params: ParameterVector, theta_par
         param_map[theta_params[i]] = weights[i]
         
     bound_circuit = circuit.assign_parameters(param_map)
-    
-    bound_circuit.measure(range(num_features, 2 * num_features), range(num_features))
+
+    qubits_to_measure = list(range(num_features, 2 * num_features))  # measure the "cell state" qubits
+    cbits_to_write    = list(range(num_features))
+    bound_circuit.measure(qubits_to_measure, cbits_to_write)
+
+    #bound_circuit.measure(range(num_features, 2 * num_features), range(num_features))
     
     backend = AerSimulator()
     compiled_circuit = transpile(bound_circuit, backend)
