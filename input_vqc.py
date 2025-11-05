@@ -2,6 +2,7 @@ from qiskit import QuantumCircuit, ClassicalRegister, transpile
 from qiskit_aer import AerSimulator
 from qiskit.circuit import ParameterVector
 from qiskit.visualization import plot_histogram
+import math 
 import numpy as np
 import matplotlib.pyplot as plt
 
