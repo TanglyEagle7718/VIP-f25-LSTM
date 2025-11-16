@@ -1,5 +1,6 @@
 qiskit
 qiskit-machine-learning
+qiskit-aer-gpu
 qiskit-aer
 matplotlib
 scipy

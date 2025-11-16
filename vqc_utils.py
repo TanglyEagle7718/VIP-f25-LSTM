@@ -39,7 +39,13 @@ def run_vqc(
     cbits_to_write = list(range(num_features))
     bound_circuit.measure(qubits_to_measure, cbits_to_write)
 
-    backend = AerSimulator()
+    backend = AerSimulator(method='statevector', device='GPU')
+    # Fallback to CPU if GPU is not available (optional, but good practice for robustness)
+    # try:
+    #     backend = AerSimulator(method='statevector', device='GPU')
+    # except Exception:
+    #     print("GPU not found or not supported, falling back to CPU simulator.")
+    #     backend = AerSimulator(method='statevector', device='CPU')
     compiled_circuit = transpile(bound_circuit, backend)
     result = backend.run(compiled_circuit, shots=shots).result()
     
