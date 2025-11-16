@@ -1,3 +1,5 @@
 qiskit
 qiskit-machine-learning
 qiskit-aer
+matplotlib
+scipy

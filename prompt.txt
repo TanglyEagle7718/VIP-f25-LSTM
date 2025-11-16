@@ -1,0 +1,102 @@
+This is our proposal paper:
+1. Introduction
+
+In classical machine learning, a commonly encountered issue is the vanishing gradient during back propagation. During this process, the error is first calculated at the output layer and the information is sent back towards the input layer, adjusting the weights as it travels back. At each layer, the derivative of the activation function (less than or equal to 1) is calculated and applied to the loss function. This signals to the neural network how drastically the weight needs to be adjusted. As the signal propagates back, it becomes smaller with each layer it travels, which means that the signal becomes really small at the initial layers of a neural network. This causes their weights to be barely adjusted, resulting in longer training times, higher training cost, or poor feature fitting. Current solutions include batch normalization, using activation function like ReLU, using Long Short-Term Memory Networks (LSTM), and incorporate gradient clipping (GeeksforGeeks, 2025). LSTM is a form of recurrent neural network (RNN), which saves information of previous states into a hidden state, giving the model the ability to capture temporal features. In addition to this hidden state, LSTM has another variable called cell state which holds memory over long term compared to the hidden state, allowing it to make more temporal connections compared to simpler RNN models (Staudemeyer et al. 2019). The approach our team is taking to solve the vanishing gradient problem is to incorporate variational quantum circuits into the LSTM model to improve the feature capturing of LSTM while improving its computation power so the model can converge on a good model in less iterations (Chen et al. 2020). In the real world, this would help better predict the trends of the stock market or predict the path and intensity of hurricanes, both of which are really time sensitive.
+
+
+image.png
+
+Figure 1 - How a classical LSTM model works
+
+Last semester, we tried to implement a crude version of a quantum LSTM model. One of the biggest bottlenecks we faced was the computational power required to simulate a large number of qubits. While you could simply run this on a larger, more computationally powerful machine, we believe that we can try and make efficiency improvements to the quantum circuits. This semester, we will attempt to solve this issue by creating new variational quantum circuits to accommodate a technique known to reduce qubit usage called Mid-Circuit Measurement and Control (MCMC). Furthermore, because of this computational bottleneck, we intend to make our models more accurate by increasing training time, thereby further reducing loss and converging to an optimal parameter set. 
+
+ 
+
+2. Relevant Work
+
+Many researchers have worked on the problem of vanishing gradients and barren plateaus in both classical and quantum machine learning. In classical deep learning, improvements such as ReLU and other modern activation functions, batch normalization, and gradient clipping have all helped reduce the loss of gradient information when training very deep models. The development of Long Short-Term Memory (LSTM) networks was another key breakthrough, because the use of memory cells and gates allowed gradients to pass back through time steps without fading away so quickly, which improved the learning of sequences. 
+
+Quantum machine learning faces a related issue called the barren plateau problem. Variational quantum circuits (VQCs), which are quantum circuits with variable parameters, are the core of most quantum machine learning models. As these circuits grow deeper or use more qubits, the gradients of their cost functions tend to vanish exponentially, making it very hard to train them. One important line of research led by Cerezo et al. shows that the choice of cost function plays a major role. They found that measuring the loss function over the entire system almost always leads to gradients disappearing, while measuring only on a few qubits can preserve larger gradients and make training easier (Cerezo et al., 2020; Pennylane tutorial, 2020). 
+
+Researchers have also explored how the structure of the quantum circuit itself affects training. Quantum Matrix Product States (qMPS), Tree Tensor Networks (qTTN), and Multi-scale Entanglement Renormalization Ansatz (qMERA), which are all inspired by tensor states, have been shown to behave differently. In qMPS circuits, gradient variance still decays exponentially, but qTTN and qMERA architectures only see polynomial decay, which is much less severe and therefore more trainable (Cerveró-Martín et al., 2023). A recent review of barren plateaus summarizes these techniques, including design, optimization, and initialization (Qi et al., 2023). 
+
+Other work compares different quantum recurrent architectures. Quantum Long Short-Term Memory (QLSTM) networks adapt the principles of classical LSTMs to the quantum setting by using quantum gates to manage hidden states and memory. However, they still rely on VQCs and can inherit barren plateau problems. Newer designs have fewer parameters and sometimes outperform QLSTMs, showing more stable training and better predictive power on tasks like modeling systems with higher variance (Chen et al., 2024). Finally, more recent studies have proposed training quantum circuits layer by layer, using parameter initialization and by introducing controlled noise to help the optimizer escape very flat regions in the cost landscape (Cunningham et al., 2024). 
+
+While there is a plethora of research into the issue of the vanishing gradient, there is minimal to no research being conducted on making QLSTMs more efficient. In this regard, our problem is unique and has potential to provide deeper insights into how QLSTMs work and potential avenues for further optimizations. 
+
+ 
+
+3. Methodology
+
+In order to implement an efficient version of a quantum LSTM, we intend to utilize Mid-Circuit Measurements on each cell in the QLSTM RNN. Mid-Circuit Measuring allows us perform measurements on a subset of qubits at a specific point in the circuit. While classical LSTM models have 3 gates, a quantum LSTM model requires 6 different VQCs:
+
+VQC1: Forget block
+VQC2: Input block
+VQC3: Update block
+VQC4: Output block
+VQC5: Hidden state processing block
+VQC6: Output processing block
+These VQCs interact with each other as shown in figure 3 (below).
+
+ 
+
+image.pngFigure 2 - Example of a QLSTM VQC (Chen et al. 2020)
+
+ 
+
+image.png
+
+Figure 3 - How VQCs interact with each other
+
+ 
+
+In the quantum LSTM model proposed by Chen et al. 2020, the entire input vector is embedded (see Fig. 3) at the beginning of the RNN cell and each VQC is executed sequentially. This repeated encoding is extremely qubit intensive. For example, the European Centre for Medium-Range Weather Forecast's weather model’s parameter database has over 7000 parameters. With amplitude encoding, the input vector would have 13 qubits. Clearly, applying amplitude encoding to the entire vector and maintain superposition between these qubits throughout the cell's operational lifetime can be quite computationally intensive. By using MCMC, we can attempt to reduce this computational burden. 
+
+For this project, we will create the various VQCs from scratch and add measurement points in these VQCs so that we can partially measure subsets of qubits. We will then use the results of these measurements to tweak VQCs further down. For example, after VQC1 produces a forget state, we will measure and reset a subset of qubits and then conditionally apply operations to VQC2 and VQC3.
+
+image.png
+
+Figure 4 - Proposed flow w/ MCMC
+
+We will also be provisioning and setting aside separate, "global" qubits to store hidden and cell states. These qubits will then be updated dynamically based on the results of the measurement. By doing this, we hope to further reduce the number of active qubits in use and reduce the number of times classical data has to be re-encoded into quantum information. This small improvement should help reduce the overall computational overhead of storing the hidden and cell state info. Finally, once all the VQCs have finished running, the qubits are measured, and the "global" qubits are updated so that they can be used for the next cell in the RNN. 
+
+In order to verify our circuit's improvements, we will apply a toy data set, like a sinusoidal wave data set, and compare its performance and accuracy to the model we developed last semester. More specifically, we will be looking at:
+
+Qubit efficiency
+No idle qubits
+Minimal severe performance bottlenecks
+Predictive performance
+At least 70% accuracy for our model
+With this methodology, we hope that we can find efficiency improvements in the quantum LSTM architectures and hopefully improve accuracy on toy datasets. 
+
+4. Expected Outcomes and Impacts
+
+The goal for the semester is to build a qubit efficient architecture for QLSTM using Qiskit to simulate its performance. We aim to achieve model accuracy of 70% on sequential data, which would be a significant improvement of just ~55% last semester. Additionally, we hope to utilize each of our qubits more effectively since previous attempts used qubits inefficiently, costing us a significant amount of computation power when simulating quantum circuits in a classical computer. Utilizing qubits more efficiently would reduce computation cost in the simulation but also benefit models ran on a quantum computer. The roadmap for this semester is as follows: 
+- Perform survey published papers in quantum circuits and quantum machine learning architectures
+- Design MCMC breakpoints in the six VQCs
+- Design MCMC ingestion for the 5 VQCs
+- Test and refine architecture based on testing and further research
+If this project is successful, we hope to achieve better model accuracy in fewer iterations while keeping qubit usage as low as possible. This sort of research can help predict behaviors in dynamic systems affected by large quantities of parameters that may be too hard for classical machines to compute, such as the prices of a stock or weather forecasting.
+
+ 
+
+ 
+
+References: 
+
+Cerezo et al., “Cost Function Dependent Barren Plateaus in Shallow Parametrized Quantum Circuits” (2020) 
+Pennylane, “Alleviating barren plateaus with local cost functions” (2020) 
+Cerveró-Martín et al., “Barren plateaus in quantum tensor network optimization” (2023) 
+Qi et al., “The barren plateaus of quantum neural networks: review, taxonomy and trends” (2023) 
+Chen et al., “Quantum Recurrent Neural Networks: Predicting the Dynamics of Oscillatory and Chaotic Systems” (2024) 
+Cunningham et al., “Investigating and Mitigating Barren Plateaus in Variational …” (2024) 
+
+R. Staudemeyer and E. Morris, “-Understanding LSTM - a tutorial into Long Short-Term Memory Recurrent Neural Networks,” 2019. Available: https://arxiv.org/pdf/1909.09586
+GeeksforGeeks, “Vanishing and Exploding Gradients Problems in Deep Learning,” GeeksforGeeks, Aug. 13, 2025. https://www.geeksforgeeks.org/deep-learning/vanishing-and-exploding-gradients-problems-in-deep-learning/
+Y.-C. Samuel, Chen, S. Yoo, and Y.-L. Fang, “Quantum Long Short-Term Memory,” Sep. 2020. Accessed: Sep. 16, 2025. [Online]. Available: https://arxiv.org/pdf/2009.01783
+ 
+ --- end of proposal ---
+
+ In this directory are individual vqcs developed by each of the group members. Do the following steps:
+ 1. verify that each vqc is correct
+ 2. combine the vqcs and create a machine learning model that utilizes the vqcs, according to our proposal (and sources)
